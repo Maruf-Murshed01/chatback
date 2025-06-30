@@ -9,7 +9,8 @@ const io = socketIo(server, {
     cors: {
         origin: [
           "http://localhost:5173", 
-          "http://127.0.0.1:5173"
+          "http://127.0.0.1:5173",
+          "https://chatappn.netlify.app"
         ],
         methods: ["GET", "POST"]
       }
@@ -17,7 +18,7 @@ const io = socketIo(server, {
 
 // Middleware
 app.use(cors({
-  origin: ["http://localhost:5173", "http://127.0.0.1:5173"]
+  origin: ["http://localhost:5173", "http://127.0.0.1:5173", "https://chatappn.netlify.app"]
 }));
 app.use(express.json());
 
