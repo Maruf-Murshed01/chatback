@@ -39,9 +39,9 @@ io.on('connection', (socket) => {
         connectedUsers.set(socket.id, username);
         socket.broadcast.emit('user-connected', username);
         
-        // Send list of connected users to the new user
+        // Send updated list of connected users to ALL users (including the new one)
         const usersList = Array.from(connectedUsers.values());
-        socket.emit('users-list', usersList);
+        io.emit('users-list', usersList);
         
         console.log(`${username} joined the chat`);
     });
@@ -143,6 +143,46 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Add group call support
+    socket.on('request-group-voice-call', () => {
+        const initiatorUsername = connectedUsers.get(socket.id);
+        console.log('📡 Received request-group-voice-call from:', initiatorUsername);
+        console.log('📡 Connected users:', Array.from(connectedUsers.values()));
+        
+        if (initiatorUsername) {
+            // Get all other users
+            const otherUsers = Array.from(connectedUsers.entries())
+                .filter(([id, username]) => id !== socket.id);
+            
+            console.log('📢 Broadcasting group-call-available to:', otherUsers.map(([id, username]) => username));
+            
+            // Notify all other users that a group call is available
+            socket.broadcast.emit('group-call-available', {
+                initiatorUsername,
+                initiatorId: socket.id
+            });
+            
+            console.log(`${initiatorUsername} started a group call`);
+        }
+    });
+
+    socket.on('join-group-voice-call', (data) => {
+        const joinerUsername = connectedUsers.get(socket.id);
+        console.log('📡 Received join-group-voice-call from:', joinerUsername);
+        
+        if (joinerUsername) {
+            // Notify the initiator and other participants
+            console.log('📢 Broadcasting user-joined-group-call to all users');
+            io.emit('user-joined-group-call', {
+                username: joinerUsername,
+                userId: socket.id,
+                initiatorId: data.initiatorId
+            });
+            
+            console.log(`${joinerUsername} joined the group call`);
+        }
+    });
+
     // Private Voice Chat Events
     socket.on('request-private-voice-call', (data) => {
         const callerUsername = connectedUsers.get(socket.id);
@@ -204,6 +244,11 @@ io.on('connection', (socket) => {
         if (username) {
             connectedUsers.delete(socket.id);
             socket.broadcast.emit('user-disconnected', username);
+            
+            // Send updated list to all remaining users
+            const usersList = Array.from(connectedUsers.values());
+            io.emit('users-list', usersList);
+            
             console.log(`${username} left the chat`);
         }
     });
