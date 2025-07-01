@@ -238,6 +238,36 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Video call events - FIXED VERSION
+    socket.on('request-video-call', (data) => {
+        const callerUsername = connectedUsers.get(socket.id); // Fix: use connectedUsers map
+        const targetSocketId = Array.from(connectedUsers.entries())
+            .find(([id, username]) => username === data.targetUsername)?.[0];
+        
+        if (targetSocketId && callerUsername) {
+            io.to(targetSocketId).emit('incoming-video-call', {
+                callerId: socket.id,
+                callerUsername: callerUsername // Fix: use the retrieved username
+            });
+        }
+    });
+
+    socket.on('accept-video-call', (data) => {
+        const accepterUsername = connectedUsers.get(socket.id); // Fix: use connectedUsers map
+        io.to(data.callerId).emit('video-call-accepted', {
+            accepterId: socket.id,
+            accepterUsername: accepterUsername // Fix: use the retrieved username
+        });
+    });
+
+    socket.on('reject-video-call', (data) => {
+        io.to(data.callerId).emit('video-call-rejected');
+    });
+
+    socket.on('end-video-call', (data) => {
+        io.to(data.targetId).emit('video-call-ended');
+    });
+
     // Handle disconnection
     socket.on('disconnect', () => {
         const username = connectedUsers.get(socket.id);
